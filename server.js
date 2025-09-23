@@ -3,13 +3,14 @@ const fs = require('fs');
 const path = require('path');
 const express = require('express');
 const OpenAI = require('openai');
+const { doStoreSGRecVector } = require('./src/services/testing/upload-docs-vector');
 
 dotenv.config();
 
 const app = express();
 app.use(express.json());
 
-const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const client = new OpenAI({ apiKey: process.env.OPENAI_KEY });
 const MODEL = process.env.OPENAI_MODEL || 'gpt-4o-mini';
 const PORT = process.env.PORT || 3000;
 
@@ -70,14 +71,20 @@ app.post('/chat/stream', async (req, res) => {
     res.setHeader('Connection', 'keep-alive');
 
     const stream = await client.responses.create({
-      model: MODEL,
-      instructions: SYSTEM_PROMPT,
-      input: [
-        { role: 'system', content: 'Answer strictly from your system knowledge.' },
-        ...history,
-        { role: 'user', content: message }
-      ],
-      stream: true
+        model: MODEL,
+        instructions: SYSTEM_PROMPT,
+        input: [
+            { role: 'system', content: 'Answer strictly from your system knowledge.' },
+            ...history,
+            { role: 'user', content: message }
+        ],
+        stream: true,
+        tools: [{ type: 'file_search' }],
+        tool_resources: {
+        file_search: {
+            vector_store_ids: [process.env.VECTOR_STORE_ID] // <-- REQUIRED
+        }
+    },
     });
 
     history.push({ role: "user", content: message });
@@ -108,5 +115,6 @@ app.post('/chat/stream', async (req, res) => {
 });
 
 app.listen(PORT, () => {
+    doStoreSGRecVector();
     console.log(`API on :${PORT}`);
 });
