@@ -29,7 +29,7 @@ const AssistantSchema = new mongoose.Schema({
         type: String,
         required: true
     },
-    systemPromptPath: {
+    systemPromptFile: {
         type: String,
         required: true
     }
